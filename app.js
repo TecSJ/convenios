@@ -1,6 +1,7 @@
 const express = require("express");
 const dotenv = require("dotenv");
 const https = require("https");
+const routerLogin = require("./router/login");
 
 dotenv.config();
 
@@ -14,6 +15,11 @@ app.use((req, res, next) => {
   res.header('Allow', 'GET, POST, OPTIONS, PUT, DELETE');
   next();
 });
+
+routerLogin(app);
+
+app.use('/login',routerLogin);
+
 
 if(process.env.MODE === 'PRODUCCION'){
     const privateKey  = fs.readFileSync(process.env.PRIVKEY, 'utf8');
