@@ -2,6 +2,7 @@ const express = require("express");
 const dotenv = require("dotenv");
 const https = require("https");
 const routerLogin = require("./router/login");
+const routerAuth = require("./router/auth");
 
 dotenv.config();
 
@@ -17,8 +18,10 @@ app.use((req, res, next) => {
 });
 
 routerLogin(app);
+routerAuth(app);
 
 app.use('/login',routerLogin);
+app.use('/auth',routerAuth);
 
 
 if(process.env.MODE === 'PRODUCCION'){
