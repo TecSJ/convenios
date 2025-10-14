@@ -4,10 +4,19 @@ const path = require('path');
 
 const privateKey = fs.readFileSync(path.join(__dirname, '../helpers/admin.key'), 'utf8');
 
+require('dotenv').config();
+const validApiKeys = [process.env.X_API_KEY];
+
 async function authMiddleware(req, res, next) {
   try {
-    const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+    // Verificar API Key
+    const apiKey = req.headers['api_key'];
+    if (!apiKey || !validApiKeys.includes(apiKey)) {
+      return res.status(401).json({ message: 'Acceso denegado. API key inválida o faltante.' });
+    }
 
+    // Verificar JWT
+    const authHeader = req.headers['authorization'] || req.headers['Authorization'];
     if (!authHeader) {
       return res.status(401).json({ message: 'Acceso denegado. Se requiere token.' });
     }

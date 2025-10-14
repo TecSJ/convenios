@@ -5,8 +5,12 @@ const bycrypt = require("bcryptjs");
 const Logg = async (req, res) => {
     const { mail, pass } = req.body;
     const con = await db.getConnection();
-
+    const X_API_KEY = req.headers['api_key'];
+    if (X_API_KEY !== process.env.X_API_KEY) {
+        return res.status(401).json({ ok: false, msg: 'Falta api key' });
+    }
     try {
+
         if (!mail || !pass ){
             return res.status(400).json({ok: false, msg: "Ambos campos son requeridos"})
         }

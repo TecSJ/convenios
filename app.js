@@ -3,6 +3,8 @@ const dotenv = require("dotenv");
 const https = require("https");
 const routerLogin = require("./router/login");
 const routerAuth = require("./router/auth");
+const routerUnidades = require("./router/unidades");
+const routerCuentas = require("./router/cuentas");
 
 dotenv.config();
 
@@ -19,9 +21,13 @@ app.use((req, res, next) => {
 
 routerLogin(app);
 routerAuth(app);
+routerUnidades(app)
+routerCuentas(app);
 
 app.use('/login',routerLogin);
 app.use('/auth',routerAuth);
+app.use('/unidades',routerUnidades);
+app.use('/cuenta',routerCuentas);
 
 
 if(process.env.MODE === 'PRODUCCION'){
