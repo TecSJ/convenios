@@ -66,8 +66,6 @@ async function authMiddlewareCoordinador(req, res, next){
       return res.status(401).json({ message: 'No es coordinador' });
     }
 
-    console.log(decoded);
-
     req.user = decoded;
 
     next();
