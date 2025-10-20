@@ -176,8 +176,31 @@ const createCuentasAdmin = async (req, res) => {
     
 }
 
+const obtenerCuentasOne = async (req, res) => {
+    const {id} = req.params;
+    const con = await db.getConnection();
+    try {
+        const [existingUsers] = await con.query(
+            "SELECT id_Cuenta, Unidades_Academicas.nombre as unidad, rfc, Cuentas.nombre AS nombre, correo, rol, estado FROM Cuentas INNER JOIN(Unidades_Academicas) ON(Unidades_Academicas.id_Unidad_Academica = Cuentas.id_Unidad_Academica) WHERE Cuentas.id_Cuenta = ?",
+            [id]
+        );
+
+        if (existingUsers.length < 1) {
+            return res.status(409).json({ ok: false, msg: "El usuario no existe" });
+        }
+
+        return res.status(201).json({ ok: true, user: existingUsers[0]});
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ ok: false, msg: 'Algo salió mal' });
+    } finally {
+        con.release();
+    }
+}
+
 module.exports = {
     createCuenta,
     restorePass,
-    createCuentasAdmin
+    createCuentasAdmin,
+    obtenerCuentasOne
 }
