@@ -198,9 +198,97 @@ const obtenerCuentasOne = async (req, res) => {
     }
 }
 
+const actualizarCuenta = async (req, res) => {
+    const {id} = req.params;
+    const {nombre, correo, rol, rfc, id_Unidad_Academica} = req.body;
+
+    const con = await db.getConnection();
+
+    try {
+        const [existingUsers] = await con.query(
+            "SELECT id_Cuenta FROM Cuentas WHERE id_Cuenta = ?",
+            [id]
+        );
+        if (existingUsers.length < 1) {
+            return res.status(409).json({ ok: false, msg: "El usuario no existe" });
+        }
+
+        if (!nombre || !correo || !rol || !rfc || !id_Unidad_Academica) {
+            return res.status(400).json({ ok: false, msg: "Todos los campos son requeridos" });
+        }
+        if (!['Gestor','Organización','Coordinador','Revisor','Director Unidad','Director General'].includes(rol)) {
+            return res.status(400).json({ ok: false, msg: "Rol inválido" });
+        }
+        if (rfc.length !== 13 || rfc.includes(' ')) {
+            return res.status(400).json({ ok: false, msg: "El RFC debe tener 13 caracteres" });
+        }
+        const [unidad] = await con.query(
+            "SELECT * FROM Unidades_Academicas WHERE id_Unidad_Academica = ?",
+            [id_Unidad_Academica]
+        );
+        if (unidad.length === 0) {
+            return res.status(400).json({ ok: false, msg: "La unidad académica no existe" });
+        }
+
+        const [validacionUsers] = await con.query(
+            "SELECT id_Cuenta FROM Cuentas WHERE id_Cuenta != ? AND (correo = ? OR rfc = ?)",
+            [id, correo, rfc]
+        );
+        if(validacionUsers.length > 0){
+            return res.status(400).json({ ok: false, msg: "CURP o RFC previamente registrados" });
+        }
+
+        const [result] = await con.query(
+            "UPDATE Cuentas SET nombre = ?, correo = ?, rol = ?, rfc = ?, id_Unidad_Academica = ? WHERE id_Cuenta = ?",
+            [nombre, correo, rol, rfc, id_Unidad_Academica, id]
+        );
+
+        return res.status(201).json({ ok: true, msg: "Cuenta actualizada exitosamente" });
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ ok: false, msg: 'Algo salió mal' });
+    } finally {
+        con.release();
+    }
+}
+
+const actualizarEstado = async (req, res) => {
+    const {id, status} = req.params;
+    const con = await db.getConnection();
+
+    try {
+        const [existingUsers] = await con.query(
+            "SELECT id_Cuenta FROM Cuentas WHERE id_Cuenta = ?",
+            [id]
+        );
+        if (existingUsers.length < 1) {
+            return res.status(409).json({ ok: false, msg: "El usuario no existe" });
+        }
+
+        if (!['Activo','Inactivo'].includes(status)) {
+            return res.status(400).json({ ok: false, msg: "estatus inválido" });
+        }
+
+        const [result] = await con.query(
+            "UPDATE Cuentas SET estado = ? WHERE id_Cuenta = ?",
+            [status, id]
+        );
+
+        return res.status(200).json({ ok: true, msg: "estado actualizado exitosamente" });
+        
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ ok: false, msg: 'Algo salió mal' });
+    } finally {
+        con.release();
+    }
+}
+
 module.exports = {
     createCuenta,
     restorePass,
     createCuentasAdmin,
-    obtenerCuentasOne
-}
+    obtenerCuentasOne,
+    actualizarCuenta,
+    actualizarEstado
+}  
