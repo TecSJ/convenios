@@ -6,28 +6,28 @@ const createCuenta = async (req, res) => {
     const { nombre, correo, contrasena, rol, rfc, id_Unidad_Academica } = req.body;
     const X_API_KEY = req.headers['api_key'];
     if (X_API_KEY !== process.env.X_API_KEY) {
-        return res.status(401).json({ ok: false, message: 'Falta api key' });
+        return res.status(401).json({ ok: false, msg: 'Falta api key' });
     }
     const con = await db.getConnection();
     try {
         if (!nombre || !correo || !contrasena || !rol || !rfc || !id_Unidad_Academica) {
-            return res.status(400).json({ ok: false, message: "Todos los campos son requeridos" });
+            return res.status(400).json({ ok: false, msg: "Todos los campos son requeridos" });
         }
         if (!['Gestor','Organización','Coordinador','Revisor','Director Unidad','Director General'].includes(rol)) {
-            return res.status(400).json({ ok: false, message: "Rol inválido" });
+            return res.status(400).json({ ok: false, msg: "Rol inválido" });
         }
         if (contrasena.length < 8 || contrasena.includes(' ')) {
-            return res.status(400).json({ ok: false, message: "La contraseña debe tener al menos 8 caracteres" });
+            return res.status(400).json({ ok: false, msg: "La contraseña debe tener al menos 8 caracteres" });
         }
         if (rfc.length !== 13 || rfc.includes(' ')) {
-            return res.status(400).json({ ok: false, message: "El RFC debe tener 13 caracteres" });
+            return res.status(400).json({ ok: false, msg: "El RFC debe tener 13 caracteres" });
         }
         const [unidad] = await con.query(
             "SELECT * FROM Unidades_Academicas WHERE id_Unidad_Academica = ?",
             [id_Unidad_Academica]
         );
         if (unidad.length === 0) {
-            return res.status(400).json({ ok: false, message: "La unidad académica no existe" });
+            return res.status(400).json({ ok: false, msg: "La unidad académica no existe" });
         }
         const [existingUsers] = await con.query(
             "SELECT * FROM Cuentas WHERE correo = ?",
@@ -35,7 +35,7 @@ const createCuenta = async (req, res) => {
         );
 
         if (existingUsers.length > 0) {
-            return res.status(409).json({ ok: false, message: "El correo ya está en uso" });
+            return res.status(409).json({ ok: false, msg: "El correo ya está en uso" });
         }
 
         const salt = await bycrypt.genSalt(10);
@@ -46,10 +46,10 @@ const createCuenta = async (req, res) => {
             [nombre, correo, hashedPassword, rol, rfc, id_Unidad_Academica]
         );
 
-        return res.status(201).json({ ok: true, message: "Cuenta creada exitosamente"});
+        return res.status(201).json({ ok: true, msg: "Cuenta creada exitosamente"});
     } catch (err) {
         console.log(err);
-        return res.status(500).json({ ok: false, message: 'Algo salió mal' });
+        return res.status(500).json({ ok: false, msg: 'Algo salió mal' });
     } finally {
         con.release();
     }
