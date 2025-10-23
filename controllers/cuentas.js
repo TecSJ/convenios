@@ -179,6 +179,7 @@ const createCuentasAdmin = async (req, res) => {
 const obtenerCuentasOne = async (req, res) => {
     const {id} = req.params;
     const con = await db.getConnection();
+
     try {
         const [existingUsers] = await con.query(
             "SELECT id_Cuenta, Unidades_Academicas.nombre as unidad, rfc, Cuentas.nombre AS nombre, correo, rol, estado FROM Cuentas INNER JOIN(Unidades_Academicas) ON(Unidades_Academicas.id_Unidad_Academica = Cuentas.id_Unidad_Academica) WHERE Cuentas.id_Cuenta = ?",
@@ -201,6 +202,7 @@ const obtenerCuentasOne = async (req, res) => {
 const actualizarCuenta = async (req, res) => {
     const {id} = req.params;
     const {nombre, correo, rol, rfc, id_Unidad_Academica} = req.body;
+    console.log('Pene2');
 
     const con = await db.getConnection();
 
@@ -255,6 +257,7 @@ const actualizarCuenta = async (req, res) => {
 const actualizarEstado = async (req, res) => {
     const {id, status} = req.params;
     const con = await db.getConnection();
+    console.log('Pene3');
 
     try {
         const [existingUsers] = await con.query(
@@ -284,11 +287,61 @@ const actualizarEstado = async (req, res) => {
     }
 }
 
+const obtenerCuentas = async (req, res) => {
+    const con = await db.getConnection();
+
+    try {
+        let { page = 1, limit = 10 } = req.query;
+        page = parseInt(page);
+        limit = parseInt(limit);
+        if (isNaN(page) || page < 1) page = 1;
+        if (isNaN(limit) || limit < 1) limit = 10;
+
+        const offset = (page - 1) * limit;
+
+        const [countResult] = await con.query("SELECT COUNT(*) AS total FROM Cuentas");
+        const total = countResult[0].total;
+
+        const [cuentas] = await con.query(
+            `SELECT 
+                Cuentas.id_Cuenta,
+                Cuentas.nombre,
+                Cuentas.correo,
+                Cuentas.rol,
+                Cuentas.rfc,
+                Cuentas.estado,
+                Cuentas.id_Unidad_Academica,
+                Unidades_Academicas.nombre AS unidad
+            FROM Cuentas
+            INNER JOIN Unidades_Academicas 
+                ON Unidades_Academicas.id_Unidad_Academica = Cuentas.id_Unidad_Academica
+            ORDER BY Cuentas.id_Cuenta DESC
+            LIMIT ? OFFSET ?`,
+            [limit, offset]
+        );
+
+        const totalPages = Math.ceil(total / limit);
+
+        return res.status(200).json({
+            total,
+            page,
+            totalPages,
+            limit,
+            data: cuentas,
+        });
+    } catch (err) {
+        return res.status(500).json({ ok: false, msg: "Algo salió mal" });
+    } finally {
+        con.release();
+    }
+};
+
 module.exports = {
     createCuenta,
     restorePass,
     createCuentasAdmin,
     obtenerCuentasOne,
     actualizarCuenta,
-    actualizarEstado
+    actualizarEstado,
+    obtenerCuentas,
 }  
