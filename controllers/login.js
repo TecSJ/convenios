@@ -29,7 +29,7 @@ const Logg = async (req, res) => {
         if (!match) {
             return res.status(401).json({ ok: false, msg: "Contraseña incorrecta" });
         }
-        const result = jwt.signJwt({ id_Cuenta: usuario.id_Cuenta, rol: usuario.rol , id_Unidad_Academica: usuario.id_Unidad_Academica, nombre: usuario.nombre, correo: usuario.correo });
+        const result = jwt.signJwt({ id_Cuenta: usuario.id_Cuenta, rol: usuario.rol , id_Unidad_Academica: usuario.id_Unidad_Academica, nombre: usuario.nombre, correo: usuario.correo, rfc: usuario.rfc });
         return res.status(200).json({ token: result });
     } catch (err) {
         console.log(err);
