@@ -110,7 +110,31 @@ const ActualizarDraft = async (req, res) => {
     }
 }
 
+const obtenerConvenio = async (req, res) => {
+    const {numeroConvenio} = req.params;
+    const con = await db.getConnection();
+    try {
+        //validacion de folio
+        const [existingConvenio] = await con.query(
+            "SELECT * FROM Convenios WHERE numero_Convenio = ?",
+            [numeroConvenio]
+        );
+
+        if (existingConvenio.length < 1) {
+            return res.status(409).json({ ok: false, msg: "El convenio no existe" });
+        }
+
+        return res.status(201).json({ ok: true, convenio: existingConvenio });
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ ok: false, msg: 'Algo salió mal' });
+    } finally {
+        con.release();
+    }
+}
+
 module.exports = {
     draft,
-    ActualizarDraft
+    ActualizarDraft,
+    obtenerConvenio
 }
