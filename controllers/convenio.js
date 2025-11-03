@@ -18,7 +18,7 @@ const obtenerConvenios = async (req, res) => {
         let dataQueryBase = `
             SELECT 
                 C.*,
-0                DATE_FORMAT(C.fecha_Inicio, '%Y-%m-%d') AS fecha_Inicio,
+                DATE_FORMAT(C.fecha_Inicio, '%Y-%m-%d') AS fecha_Inicio,
                 DATE_FORMAT(C.fecha_Fin, '%Y-%m-%d') AS fecha_Fin,
                 UA.nombre AS unidad,
                 O.nombre_Legal AS nombre_Organizacion
