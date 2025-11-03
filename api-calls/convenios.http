@@ -18,3 +18,16 @@ api_key: {{api_key}}
 
 ### obtener draft
 GET {{host}}/convenios/draft/0001
+
+###registrar convenio
+POST {{host}}/convenios/draft
+Content-Type: {{contentType}}
+
+{
+    "numero_convenio": "0001", 
+    "id_Creador_Cuenta": 11, 
+    "id_Unidad_Academica": 11, 
+    "tipo_Convenio": "Empresa",
+    "fecha_Inicio": "2025-10-29", 
+    "fecha_Fin": "3025-10-29"
+}

@@ -2,7 +2,7 @@ const db = require("../config/mysql");
 
 const draft = async (req, res) => {
     const con = await db.getConnection();
-    const {numero_convenio, id_Creador_Cuenta, id_Unidad_Academica, fecha_Inicio, fecha_Fin} = req.body;
+    const {numero_convenio, id_Creador_Cuenta, id_Unidad_Academica, tipo_Convenio, fecha_Inicio, fecha_Fin} = req.body;
 
     try {
         //validacion de folio
@@ -37,7 +37,7 @@ const draft = async (req, res) => {
 
         const [result] = await con.query(
             "INSERT INTO Convenios(numero_Convenio, id_Unidad_Academica, id_Creador_Cuenta, tipo_Convenio, estado, fecha_Inicio, fecha_Fin, ultimo_paso) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            [numero_convenio, id_Unidad_Academica, id_Creador_Cuenta, "Macro", "Incompleto", fecha_Inicio, fecha_Fin, 1]
+            [numero_convenio, id_Unidad_Academica, id_Creador_Cuenta, tipo_Convenio, "Incompleto", fecha_Inicio, fecha_Fin, 1]
         );
 
         return res.status(201).json({ ok: true, msg: "Convenio creado con exitosamente" });
