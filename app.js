@@ -26,12 +26,13 @@ routerAuth(app);
 routerUnidades(app)
 routerCuentas(app);
 routerConvenios(app);
+routerConvenios(app);
 
 app.use('/login',routerLogin);
 app.use('/auth',routerAuth);
 app.use('/unidades',routerUnidades);
 app.use('/cuenta',routerCuentas);
-app.use('/convenios',routerConvenios);
+app.use('/convenios', routerConvenios);
 
 
 if(process.env.MODE === 'PRODUCCION'){
