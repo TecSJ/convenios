@@ -7,6 +7,7 @@ const routerUnidades = require("./router/unidades");
 const routerCuentas = require("./router/cuentas");
 const routerConvenios = require("./router/convenios");
 
+
 dotenv.config();
 
 const app = express();
@@ -24,6 +25,7 @@ routerLogin(app);
 routerAuth(app);
 routerUnidades(app)
 routerCuentas(app);
+routerConvenios(app);
 routerConvenios(app);
 
 app.use('/login',routerLogin);
