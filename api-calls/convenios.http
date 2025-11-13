@@ -31,3 +31,16 @@ Content-Type: {{contentType}}
     "fecha_Inicio": "2025-10-29", 
     "fecha_Fin": "3025-10-29"
 }
+
+### Obtener estados
+GET {{host}}/locacion/estados
+Content-Type: {{contentType}}
+api_key: {{api_key}}
+Authorization: Bearer {{token}}
+
+
+### Obtener municipios
+GET {{host}}/locacion/municipios/12
+Content-Type: {{contentType}}
+api_key: {{api_key}}
+Authorization: Bearer {{token}}

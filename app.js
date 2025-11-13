@@ -6,6 +6,7 @@ const routerAuth = require("./router/auth");
 const routerUnidades = require("./router/unidades");
 const routerCuentas = require("./router/cuentas");
 const routerConvenios = require("./router/convenios");
+const routerLocacion = require("./router/locacion");
 
 
 dotenv.config();
@@ -27,12 +28,14 @@ routerUnidades(app)
 routerCuentas(app);
 routerConvenios(app);
 routerConvenios(app);
+routerLocacion(app);
 
 app.use('/login',routerLogin);
 app.use('/auth',routerAuth);
 app.use('/unidades',routerUnidades);
 app.use('/cuenta',routerCuentas);
 app.use('/convenios', routerConvenios);
+app.use('/locacion', routerLocacion)
 
 
 if(process.env.MODE === 'PRODUCCION'){
