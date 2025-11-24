@@ -1,0 +1,52 @@
+@host = http://localhost:3026
+@contentType = application/json
+@api_key = c9754e70-a265-4363-97c7-3b7322fe4490
+
+### Login
+# @name login
+POST {{host}}/login
+Content-Type: {{contentType}}
+api_key: {{api_key}}
+
+{
+	"mail": "uriel.aguilera@tecmm.edu.mx",
+	"pass": "pqn1fy0it9"
+}
+
+### Get me
+@token = {{login.response.body.token}}
+
+### Obtener estados
+POST {{host}}/organizacion
+Content-Type: {{contentType}}
+api_key: {{api_key}}
+Authorization: Bearer {{token}}
+
+{
+	"rfc": "AYUDAMEYISUS",
+	"nombre_Legal": "Chupones de mangera A.C.",
+    "nombre_Comercial": "Chupones de mangera A.C.",
+    "nombre_Titular": "Don Chupon",
+    "puesto_Titular": "Jefe de Jefes",
+    "numero_Escritura": "123456789",
+    "nombre_Notario": "Hermano de Don Chupon",
+    "numero_Notaria": "123789456",
+    "municipio_Notaria": "ALAMBRADOS",
+    "actividades": "Elaboración de chupones de manguera",
+    "domicilio_Calle": "Asereje aja deje 789",
+    "domicilio_Estado": "Chihuahua",
+    "domicilio_Municipio": "Chihuahua",
+    "domicilio_CP": "45089",
+    "contacto_Telefono": "3315752741",
+    "contacto_Email": "chupones@manguera.com",
+    "oficio_Nombramiento": "aaaaaaaaaa",
+    "fecha_Nombramiento": "2025-06-09",
+    "ine_Representante": "14848sxjnx578",
+    "acta_constitutiva": "qs84xwjbwkjubw",
+    "tipo": "Empresa",
+	"testigos": [
+		"GASPAR DEL BARRIO",
+		"PELUZIN",
+		"EL ABUELO"
+	]
+}

@@ -6,7 +6,8 @@ const routerAuth = require("./router/auth");
 const routerUnidades = require("./router/unidades");
 const routerCuentas = require("./router/cuentas");
 const routerConvenios = require("./router/convenios");
-
+const routerLocacion = require("./router/locacion");
+const routerOrganizacion = require("./router/Organizaciones")
 
 dotenv.config();
 
@@ -27,13 +28,16 @@ routerUnidades(app)
 routerCuentas(app);
 routerConvenios(app);
 routerConvenios(app);
+routerLocacion(app);
+routerOrganizacion(app);
 
 app.use('/login',routerLogin);
 app.use('/auth',routerAuth);
 app.use('/unidades',routerUnidades);
 app.use('/cuenta',routerCuentas);
 app.use('/convenios', routerConvenios);
-
+app.use('/locacion', routerLocacion);
+app.use('/organizacion', routerOrganizacion);
 
 if(process.env.MODE === 'PRODUCCION'){
     const privateKey  = fs.readFileSync(process.env.PRIVKEY, 'utf8');
