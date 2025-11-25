@@ -1,13 +1,19 @@
 const express = require("express");
 const dotenv = require("dotenv");
+const http = require("http");
 const https = require("https");
+const fs = require("fs");
+const { Server } = require("socket.io");
+const jwt = require("jsonwebtoken");
 const routerLogin = require("./router/login");
 const routerAuth = require("./router/auth");
 const routerUnidades = require("./router/unidades");
 const routerCuentas = require("./router/cuentas");
 const routerConvenios = require("./router/convenios");
 const routerLocacion = require("./router/locacion");
-const routerOrganizacion = require("./router/Organizaciones")
+const routerOrganizacion = require("./router/Organizaciones");
+const routerNotificaciones = require("./router/notificaciones");
+
 
 dotenv.config();
 
@@ -27,9 +33,9 @@ routerAuth(app);
 routerUnidades(app)
 routerCuentas(app);
 routerConvenios(app);
-routerConvenios(app);
 routerLocacion(app);
 routerOrganizacion(app);
+routerNotificaciones(app);
 
 app.use('/login',routerLogin);
 app.use('/auth',routerAuth);
@@ -38,23 +44,66 @@ app.use('/cuenta',routerCuentas);
 app.use('/convenios', routerConvenios);
 app.use('/locacion', routerLocacion);
 app.use('/organizacion', routerOrganizacion);
+app.use('/notificaciones', routerNotificaciones);
 
-if(process.env.MODE === 'PRODUCCION'){
-    const privateKey  = fs.readFileSync(process.env.PRIVKEY, 'utf8');
-    const ca = fs.readFileSync(process.env.CA, 'utf8');
-    const certificate = fs.readFileSync(process.env.CERT, 'utf8');
+const configureSocketIO = (serverInstance) => {
 
-    const credentials = { key: privateKey, ca: ca, cert: certificate };
-    const https_server = https.createServer( credentials, app );
+    const io = new Server(serverInstance, { cors: { origin: "*",  methods: ["GET", "POST"] } });
+    io.use((socket, next) => {
+        const token = socket.handshake.auth.token; 
+        if (!token) {
+            return next(new Error("No autorizado: Token no proporcionado"));
+        }
+        try {
+            const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            socket.user = decoded; 
+            next();
+        } catch (err) {
+            return next(new Error("No autorizado: Token inválido"));
+        }
+    });
 
-    https_server.listen(process.env.PORT, () => {
-        console.log('servidor corriendo en el puerto:', process.env.PORT);
-    })
+    io.on('connection', (socket) => {
+        console.log(`Usuario conectado al Socket: ${socket.user.cuenta_id}`);
+        const cuenta_id = socket.user.cuenta_id; 
+        if (cuenta_id) {
+            socket.join(`cuenta_${cuenta_id}`);
+            console.log(`Usuario unido a la sala: cuenta_${cuenta_id}`);
+        }
+        socket.on('disconnect', () => {
+            console.log('Usuario desconectado del Socket');
+        });
+    });
 
-}else{
-    app.listen(process.env.PORT, () => {
-        console.log('servidor corriendo en el puerto:', process.env.PORT);
-    })
+    return io;
+};
+
+let server;
+if (process.env.NODE_ENV === 'PRODUCCION') {
+    try {
+        const privateKey  = fs.readFileSync(process.env.PRIVKEY, 'utf8');
+        const ca = fs.readFileSync(process.env.CA, 'utf8');
+        const certificate = fs.readFileSync(process.env.CERT, 'utf8');
+    
+        const credentials = { key: privateKey, ca: ca, cert: certificate };        
+        server = https.createServer(credentials, app);
+        const io = configureSocketIO(server);
+        app.set('socketio', io);
+        server.listen(process.env.PORT, () => {
+            console.log('Servidor HTTPS (WSS) corriendo en puerto:', process.env.PORT);
+        });
+    } catch (error) {
+        console.error("Error cargando certificados SSL:", error);
+    }
+
+} else {
+
+    server = http.createServer(app);
+    const io = configureSocketIO(server);
+    app.set('socketio', io);
+    server.listen(process.env.PORT, () => {
+        console.log('Servidor HTTP (WS) desarrollo corriendo en puerto:', process.env.PORT);
+    });
 }
 
 module.exports = app;
