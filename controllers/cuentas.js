@@ -336,6 +336,45 @@ const obtenerCuentas = async (req, res) => {
     }
 };
 
+const change_pass = async (req, res) => {
+    const { pass, new_pass } = req.body;
+    const { correo } = req.user; 
+    const X_API_KEY = req.headers['api_key'];
+    if (X_API_KEY !== process.env.X_API_KEY) {
+        return res.status(401).json({ ok: false, message: 'Falta api key' });
+    }
+    
+    const con = await db.getConnection();
+    try {
+
+        const current = await con.query("select contrasena from Cuentas where correo like ? and estado = 'Activo'",[correo]);
+        const validPassword = await bycrypt.compare(pass, current[0][0].contrasena);
+        
+        if (pass === new_pass) {
+            return res.status(400).json({ ok: false, message: 'La nueva contraseña no puede ser la misma que la actual' });
+        }
+
+        if (!validPassword){
+            return  res.status(400).json({ ok: false, message: 'Contraseña actual incorrecta' });
+        }
+
+        if (new_pass.length < 8 || new_pass.includes(' ')) {
+            return res.status(400).json({ ok: false, message: "La nueva contraseña debe tener al menos 8 caracteres" });
+        }
+
+        const salt = await bycrypt.genSalt(10);
+        const hashedPassword = await bycrypt.hash(new_pass, salt);
+
+        await con.query("UPDATE Cuentas SET contrasena = ? WHERE correo = ?", [hashedPassword, correo]);
+        return res.status(200).json({ ok: true, message: "Cambio realizado" });
+    } catch (err) {
+        console.log(err);
+        return res.status(500).json({ ok: false, message: 'Algo salió mal' });
+    } finally {
+        con.release();
+    }
+};
+
 module.exports = {
     createCuenta,
     restorePass,
@@ -344,4 +383,5 @@ module.exports = {
     actualizarCuenta,
     actualizarEstado,
     obtenerCuentas,
+    change_pass,
 }  
