@@ -118,7 +118,34 @@ const subirDocumentos = async (req, res) => {
   }
 };
 
+const obtenerAnexos = async (req, res) => {
+    const con = await db.getConnection();
+    const { idConvenio } = req.params;
+    const X_API_KEY = req.headers['api_key'];
+    if (X_API_KEY !== process.env.X_API_KEY) {
+        return res.status(401).json({ ok: false, msg: 'Falta api key' });
+    }
+  try {
+    const [rows] = await con.query(
+      `SELECT cd.id_Anexo, cd.ruta_archivo, td.nombre AS tipo_documento
+      FROM Convenios_Anexos cd
+      JOIN Tipos_Documentos td ON cd.id_Tipo_Documento = td.id_Tipo_Documento
+       WHERE cd.id_Convenio = ?`,
+      [idConvenio]
+    );
+    
+    return res.status(201).json({ Anexos: rows });
+
+  } catch (error) {
+    console.error("ERROR OBTENER ANEXOS:", error);
+    throw error;
+  }finally {
+        con.release();
+  }
+}
+
 module.exports = {
   subirDocumentos,
-  tiposDocumentos
+  tiposDocumentos,
+  obtenerAnexos
 };
