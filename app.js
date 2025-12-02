@@ -11,8 +11,9 @@ const routerUnidades = require("./router/unidades");
 const routerCuentas = require("./router/cuentas");
 const routerConvenios = require("./router/convenios");
 const routerLocacion = require("./router/locacion");
-const routerOrganizacion = require("./router/Organizaciones");
+const routerOrganizacion = require("./router/organizaciones");
 const routerNotificaciones = require("./router/notificaciones");
+const routerMedia = require("./router/media");
 
 
 dotenv.config();
@@ -36,15 +37,7 @@ routerConvenios(app);
 routerLocacion(app);
 routerOrganizacion(app);
 routerNotificaciones(app);
-
-app.use('/login',routerLogin);
-app.use('/auth',routerAuth);
-app.use('/unidades',routerUnidades);
-app.use('/cuenta',routerCuentas);
-app.use('/convenios', routerConvenios);
-app.use('/locacion', routerLocacion);
-app.use('/organizacion', routerOrganizacion);
-app.use('/notificaciones', routerNotificaciones);
+routerMedia(app);
 
 const configureSocketIO = (serverInstance) => {
 
