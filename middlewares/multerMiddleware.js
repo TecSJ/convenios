@@ -39,11 +39,11 @@ export const uploadMultipleFields = multer({
   fileFilter,
   limits: { fileSize: 20 * 1024 * 1024 },
 }).fields([
-  { name: "acta", maxCount: 1 },                   // Acta constitutiva
-  { name: "poder", maxCount: 1 },                  // Poder del representante
-  { name: "altaHacienda", maxCount: 1 },           // CSF / Alta ante hacienda
-  { name: "identificacion", maxCount: 1 },         // INE
-  { name: "comprobante", maxCount: 1 },            // Comprobante domicilio
-  { name: "convenioFirmado", maxCount: 1 },        // Convenio firmado
-  { name: "nombramiento", maxCount: 1 },        // Convenio firmado
+  { name: "Acta", maxCount: 1 },                   // Acta constitutiva
+  { name: "Poder", maxCount: 1 },                  // Poder del representante
+  { name: "AltaHacienda", maxCount: 1 },           // CSF / Alta ante hacienda
+  { name: "Identificacion", maxCount: 1 },         // INE
+  { name: "Comprobante", maxCount: 1 },            // Comprobante domicilio
+  { name: "ConvenioFirmado", maxCount: 1 },        // Convenio firmado
+  { name: "Nombramiento", maxCount: 1 },        // Convenio firmado
 ]);

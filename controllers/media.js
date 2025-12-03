@@ -100,7 +100,6 @@ const subirDocumentos = async (req, res) => {
       });
     }
 
-    console.log("Inserts preparados:", inserts);
 
     await db.query(
       "INSERT INTO Convenios_Anexos (id_Convenio, id_Tipo_Documento, ruta_archivo) VALUES ?",
@@ -144,8 +143,51 @@ const obtenerAnexos = async (req, res) => {
   }
 }
 
+const deleteAnexo = async (req, res) => {
+    const con = await db.getConnection();
+    const { idAnexo } = req.params;
+    const X_API_KEY = req.headers['api_key'];
+    if (X_API_KEY !== process.env.X_API_KEY) {
+        return res.status(401).json({ ok: false, msg: 'Falta api key' });
+    }
+  try {
+    const [rows] = await con.query(
+      `SELECT ruta_archivo FROM Convenios_Anexos WHERE id_Anexo = ?`,
+      [idAnexo]
+    );
+
+    if (rows.length === 0) {
+      return res.status(404).json({ message: "Anexo no encontrado" });
+    }
+
+    const rutaArchivo = rows[0].ruta_archivo;
+
+    await con.query(
+      `DELETE FROM Convenios_Anexos WHERE id_Anexo = ?`,
+      [idAnexo]
+    );
+
+    fs.unlink(rutaArchivo, (err) => {
+      if (err) {
+        console.error("Error al eliminar archivo:", err);
+      } else {
+        console.log(`Archivo eliminado: ${rutaArchivo}`);
+      }
+    });
+
+    return res.status(200).json({ message: "Anexo eliminado exitosamente" });
+
+  } catch (error) {
+    console.error("ERROR ELIMINAR ANEXO:", error);
+    return res.status(500).json({ message: "Error en el servidor" });
+  } finally {
+        con.release();
+  }
+}
+
 module.exports = {
   subirDocumentos,
   tiposDocumentos,
-  obtenerAnexos
+  obtenerAnexos,
+  deleteAnexo
 };
