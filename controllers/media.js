@@ -2,6 +2,7 @@ const path = require("path");
 const fs = require("fs");
 const db = require("../config/mysql");
 
+// 1. Mapas y configuración centralizada
 const formFieldMap = {
   "Acta Constitutiva": "Acta",
   "Poder del Representante Legal": "Poder",
@@ -12,182 +13,135 @@ const formFieldMap = {
   "Convenio Firmado": "ConvenioFirmado"
 };
 
-const tiposDocumentos = async (req, res) => {
-    const con = await db.getConnection();
-    const X_API_KEY = req.headers['api_key'];
-    if (X_API_KEY !== process.env.X_API_KEY) {
+const reverseFormFieldMap = Object.fromEntries(Object.entries(formFieldMap).map(([k, v]) => [v, k]));
+
+const cleanupFiles = (files) => {
+    if (files) Object.values(files).flat().forEach(file => {
+        try { fs.unlinkSync(file.path); } catch (e) { console.error("Error limpiando archivo:", e); }
+    });
+};
+
+const withDb = async (req, res, callback) => {
+    if (req.headers['api_key'] !== process.env.X_API_KEY) {
         return res.status(401).json({ ok: false, msg: 'Falta api key' });
     }
+    const con = await db.getConnection();
     try {
-        const [tipos] = await con.query("SELECT * FROM Tipos_Documentos");
-        return res.status(200).json({ tipos });
+        await callback(con);
     } catch (err) {
-        console.log(err);
-        return res.status(500).json({ ok: false, msg: 'Algo salió mal' });
+        console.error("SERVER ERROR:", err);
+        if (!res.headersSent) res.status(500).json({ ok: false, msg: 'Error en el servidor' });
     } finally {
         con.release();
     }
-
 };
 
-const subirDocumentos = async (req, res) => {
-  try {
+const tiposDocumentos = (req, res) => withDb(req, res, async (con) => {
+    const [tipos] = await con.query("SELECT * FROM Tipos_Documentos");
+    res.status(200).json({ tipos });
+});
+
+const subirDocumentos = (req, res) => withDb(req, res, async (con) => {
     const { folio, idConvenio, tipoPersona } = req.body;
-
-    if (!folio || !idConvenio || !tipoPersona) {
-      return res.status(400).json({
-        message: "folio, idConvenio y tipoPersona son requeridos"
-      });
-    }
-
-    const [rows] = await db.query(
-      "SELECT id_Tipo_Documento, nombre FROM Tipos_Documentos WHERE owner = ?",
-      [tipoPersona]
-    );
-
-    if (rows.length === 0) {
-      return res.status(400).json({
-        message: `No existen documentos configurados para el tipo de persona: ${tipoPersona}`
-      });
-    }
-
-    const tipoDocMap = {};
-    rows.forEach((row) => {
-      const campo = formFieldMap[row.nombre];
-      if (campo) {
-        tipoDocMap[campo] = row.id_Tipo_Documento;
-      }
-    });
-
     const files = req.files;
 
-    if (!files || Object.keys(files).length === 0) {
-      return res.status(400).json({
-        message: "No se recibieron archivos"
-      });
+    if (!folio || !idConvenio || !tipoPersona) {
+        cleanupFiles(files);
+        return res.status(400).json({ message: "Todos los datos (folio, idConvenio, tipoPersona) son requeridos" });
     }
 
-    const carpetaFolio = path.join("uploads", folio.toString());
-    if (!fs.existsSync(carpetaFolio)) {
-      fs.mkdirSync(carpetaFolio, { recursive: true });
+    const [rows] = await con.query("SELECT id_Tipo_Documento, nombre FROM Tipos_Documentos WHERE owner = ?", [tipoPersona]);
+
+    if (!rows.length) {
+        cleanupFiles(files);
+        return res.status(400).json({ message: `No existen documentos configurados para: ${tipoPersona}` });
     }
+
+    if (!files || Object.keys(files).length === 0) {
+        return res.status(400).json({ message: "No se recibieron archivos" });
+    }
+
+    const tipoDocMap = rows.reduce((acc, row) => {
+        const campo = formFieldMap[row.nombre];
+        if (campo) acc[campo] = row.id_Tipo_Documento;
+        return acc;
+    }, {});
+
+    const carpetaFolio = path.join("uploads", folio.toString());
+    if (!fs.existsSync(carpetaFolio)) fs.mkdirSync(carpetaFolio, { recursive: true });
 
     const inserts = [];
 
-    for (const field in files) {
-      const file = files[field][0];
-      const idTipo = tipoDocMap[field];
-
-      if (!idTipo) {
-        try {
-          fs.unlinkSync(file.path);
-          console.log(`Archivo eliminado por campo inválido: ${file.path}`);
-        } catch (err) {
-          console.error("Error al eliminar archivo inválido:", err);
+    for (const key in files) {
+        const file = files[key][0];
+        const idTipo = tipoDocMap[key];
+        
+        if (!idTipo) {
+            fs.unlinkSync(file.path);
+            continue;
         }
-        continue;
-      }
 
-      const rutaArchivo = path.join("uploads", folio.toString(), file.filename);
-
-      inserts.push([idConvenio, idTipo, rutaArchivo]);
+        try {
+            const newFileName = `${file.fieldname}${path.extname(file.originalname)}`;
+            const newPath = path.join(carpetaFolio, newFileName);
+            fs.renameSync(file.path, newPath);
+            
+            inserts.push([idConvenio, idTipo, path.join("uploads", folio.toString(), newFileName)]);
+        } catch (err) {
+            console.error(`Error moviendo archivo ${file.path}:`, err);
+        }
     }
 
-    if (inserts.length === 0) {
-      return res.status(400).json({
-        message:
-          "Ningún archivo coincide con los tipos válidos para esta persona. Archivos inválidos fueron eliminados."
-      });
-    }
+    if (!inserts.length) return res.status(400).json({ message: "Ningún archivo válido fue procesado." });
 
-
-    await db.query(
-      "INSERT INTO Convenios_Anexos (id_Convenio, id_Tipo_Documento, ruta_archivo) VALUES ?",
-      [inserts]
-    );
+    await con.query("INSERT INTO Convenios_Anexos (id_Convenio, id_Tipo_Documento, ruta_archivo) VALUES ?", [inserts]);
     
-    return res.json({
-      message: "Documentos guardados exitosamente",
-      documentosProcesados: inserts.length
+    res.json({ message: "Documentos guardados exitosamente", documentosProcesados: inserts.length });
+});
+
+const obtenerAnexos = (req, res) => withDb(req, res, async (con) => {
+    const [rows] = await con.query(
+        `SELECT cd.id_Anexo, cd.ruta_archivo, td.nombre AS tipo_documento
+         FROM Convenios_Anexos cd
+         JOIN Tipos_Documentos td ON cd.id_Tipo_Documento = td.id_Tipo_Documento
+         WHERE cd.id_Convenio = ?`, [req.params.idConvenio]
+    );
+    res.status(201).json({ Anexos: rows });
+});
+
+const descargarAnexo = (req, res) => withDb(req, res, async (con) => {
+    const nombreDocumento = reverseFormFieldMap[req.params.docKey];
+    if (!nombreDocumento) return res.status(404).json({ message: "Clave de documento inválida" });
+
+    const [rows] = await con.query(
+        `SELECT cd.ruta_archivo FROM Convenios_Anexos cd
+         JOIN Tipos_Documentos td ON cd.id_Tipo_Documento = td.id_Tipo_Documento
+         WHERE cd.id_Convenio = ? AND td.nombre = ?`, [req.params.idConvenio, nombreDocumento]
+    );
+
+    if (!rows.length) return res.status(404).json({ message: "Anexo no encontrado" });
+
+    const rutaAbsoluta = path.resolve(rows[0].ruta_archivo);
+
+    if (!fs.existsSync(rutaAbsoluta)) return res.status(404).json({ message: "El archivo físico no existe" });
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `inline; filename="${path.basename(rutaAbsoluta)}"`);
+    res.sendFile(rutaAbsoluta);
+});
+
+const deleteAnexo = (req, res) => withDb(req, res, async (con) => {
+    const [rows] = await con.query("SELECT ruta_archivo FROM Convenios_Anexos WHERE id_Anexo = ?", [req.params.idAnexo]);
+    
+    if (!rows.length) return res.status(404).json({ message: "Anexo no encontrado" });
+
+    await con.query("DELETE FROM Convenios_Anexos WHERE id_Anexo = ?", [req.params.idAnexo]);
+    
+    fs.unlink(rows[0].ruta_archivo, (err) => {
+        if (err) console.error("Error eliminando físico:", err);
     });
 
-  } catch (error) {
-    console.error("ERROR SUBIR DOCUMENTOS:", error);
-    return res.status(500).json({ message: "Error en el servidor" });
-  }
-};
+    res.status(200).json({ message: "Anexo eliminado exitosamente" });
+});
 
-const obtenerAnexos = async (req, res) => {
-    const con = await db.getConnection();
-    const { idConvenio } = req.params;
-    const X_API_KEY = req.headers['api_key'];
-    if (X_API_KEY !== process.env.X_API_KEY) {
-        return res.status(401).json({ ok: false, msg: 'Falta api key' });
-    }
-  try {
-    const [rows] = await con.query(
-      `SELECT cd.id_Anexo, cd.ruta_archivo, td.nombre AS tipo_documento
-      FROM Convenios_Anexos cd
-      JOIN Tipos_Documentos td ON cd.id_Tipo_Documento = td.id_Tipo_Documento
-       WHERE cd.id_Convenio = ?`,
-      [idConvenio]
-    );
-    
-    return res.status(201).json({ Anexos: rows });
-
-  } catch (error) {
-    console.error("ERROR OBTENER ANEXOS:", error);
-    throw error;
-  }finally {
-        con.release();
-  }
-}
-
-const deleteAnexo = async (req, res) => {
-    const con = await db.getConnection();
-    const { idAnexo } = req.params;
-    const X_API_KEY = req.headers['api_key'];
-    if (X_API_KEY !== process.env.X_API_KEY) {
-        return res.status(401).json({ ok: false, msg: 'Falta api key' });
-    }
-  try {
-    const [rows] = await con.query(
-      `SELECT ruta_archivo FROM Convenios_Anexos WHERE id_Anexo = ?`,
-      [idAnexo]
-    );
-
-    if (rows.length === 0) {
-      return res.status(404).json({ message: "Anexo no encontrado" });
-    }
-
-    const rutaArchivo = rows[0].ruta_archivo;
-
-    await con.query(
-      `DELETE FROM Convenios_Anexos WHERE id_Anexo = ?`,
-      [idAnexo]
-    );
-
-    fs.unlink(rutaArchivo, (err) => {
-      if (err) {
-        console.error("Error al eliminar archivo:", err);
-      } else {
-        console.log(`Archivo eliminado: ${rutaArchivo}`);
-      }
-    });
-
-    return res.status(200).json({ message: "Anexo eliminado exitosamente" });
-
-  } catch (error) {
-    console.error("ERROR ELIMINAR ANEXO:", error);
-    return res.status(500).json({ message: "Error en el servidor" });
-  } finally {
-        con.release();
-  }
-}
-
-module.exports = {
-  subirDocumentos,
-  tiposDocumentos,
-  obtenerAnexos,
-  deleteAnexo
-};
+module.exports = { subirDocumentos, tiposDocumentos, obtenerAnexos, deleteAnexo, descargarAnexo };
