@@ -1,4 +1,7 @@
 const db = require("../config/mysql");
+const fs = require("fs");
+const handlebars = require('handlebars');
+const puppeteer = require('puppeteer');
 
 const draft = async (req, res) => {
     const con = await db.getConnection();
@@ -225,9 +228,80 @@ const obtenerConvenios = async (req, res) => {
         con.release();
     }
 };
+
+const convenioEmpresas = async (req, res) => {
+    const source = fs.readFileSync('./formatos/empresa.html').toString();
+    const sinSaltosDeLinea = source.replace(/\n/g, '');
+    
+    const template = handlebars.compile(sinSaltosDeLinea);
+    const htmlToSend = template(req.body);
+
+    res.status(200).json({ok: true, html: htmlToSend});
+}
+
+const convenioDependencia = async (req, res) => {
+    const source = fs.readFileSync('./formatos/dependencia.html').toString();
+
+    const sinSaltosDeLinea = source.replace(/\n/g, '');
+    const template = handlebars.compile(sinSaltosDeLinea);
+    const htmlToSend = template(req.body);
+    
+    res.status(200).json({ok: true, html: htmlToSend});
+}
+
+const convenioPersona = async (req, res) => {
+    const source = fs.readFileSync('./formatos/persona.html').toString();
+    
+    const sinSaltosDeLinea = source.replace(/\n/g, '');
+    const template = handlebars.compile(sinSaltosDeLinea);
+    const htmlToSend = template(req.body);
+
+    res.status(200).json({ok: true, html: htmlToSend});
+}
+
+const generarPdf = async (req, res) => {
+    try {
+        const { htmlContent } = req.body;
+
+        // 1. Lanzar el navegador
+        const browser = await puppeteer.launch({ 
+            headless: "new", 
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox'
+            ] 
+        });
+        const page = await browser.newPage();
+
+        // 2. Definir el contenido HTML
+        await page.setContent(htmlContent, { waitUntil: 'networkidle0' });
+
+        // 3. Generar el PDF en memoria (Buffer)
+        const pdfBuffer = await page.pdf({
+            format: 'A4',
+            printBackground: true,
+            margin: { top: '20px', right: '20px', bottom: '20px', left: '20px' }
+        });
+
+        await browser.close();
+
+        // 4. Configurar headers y enviar el PDF
+        res.contentType("application/pdf");
+        res.send(pdfBuffer);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).send('Error generando el PDF');
+    }
+}
+
 module.exports = {
     draft,
     ActualizarDraft,
     obtenerConvenio,
     obtenerConvenios,
+    convenioEmpresas,
+    convenioDependencia,
+    convenioPersona,
+    generarPdf
 }
