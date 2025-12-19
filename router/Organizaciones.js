@@ -1,14 +1,10 @@
 const { Router } = require("express");
 const { authMiddleware, ROLES } = require("../middlewares/authMiddleware");
-<<<<<<< HEAD
 const { registrarOrganizacion, procesarArchivo } = require("../controllers/Organizaciones");
 const multer = require('multer');
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
-=======
-const { registrarOrganizacion } = require("../controllers/organizaciones");
->>>>>>> main
 
 const routerOrganizacion = Router();
 
