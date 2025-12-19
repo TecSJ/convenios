@@ -1,4 +1,5 @@
 const db = require("../config/mysql");
+const mammoth = require('mammoth');
 
 const registrarOrganizacion = async (req, res) => {
     const con = await db.getConnection();
@@ -68,6 +69,33 @@ const registrarOrganizacion = async (req, res) => {
     }
 }
 
+const procesarArchivo = async (req, res) => {
+    if (!req.file) {
+        return res.status(400).send('No se proporcionó ningún archivo.');
+    }
+
+    try {
+        const result = await mammoth.convertToHtml({ buffer: req.file.buffer });
+        
+        const htmlContent = result.value; // El HTML extraído
+        const messages = result.messages; // Advertencias o errores
+
+        res.json({
+            ok: true,
+            html: htmlContent,
+            warnings: messages
+        });
+
+    }catch(error){
+        console.error('Error procesando el archivo DOCX:', error);
+        return res.status(500).json({ 
+            success: false,
+            message: 'Error interno del servidor al convertir el archivo.' 
+        });
+    }
+}
+
 module.exports = {
-    registrarOrganizacion
+    registrarOrganizacion,
+    procesarArchivo
 }

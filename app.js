@@ -27,7 +27,6 @@ routerAuth(app);
 routerUnidades(app)
 routerCuentas(app);
 routerConvenios(app);
-routerConvenios(app);
 routerLocacion(app);
 routerOrganizacion(app);
 
