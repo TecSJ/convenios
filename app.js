@@ -5,28 +5,35 @@ const https = require("https");
 const fs = require("fs");
 const { Server } = require("socket.io");
 const jwt = require("jsonwebtoken");
+const cors = require('cors');
+
 const routerLogin = require("./router/login");
 const routerAuth = require("./router/auth");
 const routerUnidades = require("./router/unidades");
 const routerCuentas = require("./router/cuentas");
 const routerConvenios = require("./router/convenios");
 const routerLocacion = require("./router/locacion");
-const routerOrganizacion = require("./router/Organizaciones");
+const routerOrganizacion = require("./router/organizaciones");
 const routerNotificaciones = require("./router/notificaciones");
-
+const routerMedia = require("./router/media");
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
 
-app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Authorization, X-API-KEY, Origin, X-Requested-With, Content-Type, Accept, Access-Control-Allow-Request-Method, api_key');
-  res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, PATCH, DELETE');
-  res.header('Allow', 'GET, POST, OPTIONS, PATCH, DELETE');
-  next();
-});
+const FRONTEND_ORIGIN = process.env.NODE_ENV === 'PRODUCCION' 
+    ? process.env.FRONTEND_URL_PROD 
+    : ['http://localhost:5173', 'http://127.0.0.1:5173'];
+
+const corsOptions = {
+    origin: FRONTEND_ORIGIN, 
+    methods: ['GET', 'POST', 'OPTIONS', 'PATCH', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'api_key', 'X-API-KEY'], 
+    credentials: true,
+    optionsSuccessStatus: 204 
+};
+app.use(cors(corsOptions)); 
 
 routerLogin(app);
 routerAuth(app);
@@ -36,19 +43,17 @@ routerConvenios(app);
 routerLocacion(app);
 routerOrganizacion(app);
 routerNotificaciones(app);
-
-app.use('/login',routerLogin);
-app.use('/auth',routerAuth);
-app.use('/unidades',routerUnidades);
-app.use('/cuenta',routerCuentas);
-app.use('/convenios', routerConvenios);
-app.use('/locacion', routerLocacion);
-app.use('/organizacion', routerOrganizacion);
-app.use('/notificaciones', routerNotificaciones);
+routerMedia(app);
 
 const configureSocketIO = (serverInstance) => {
 
-    const io = new Server(serverInstance, { cors: { origin: "*",  methods: ["GET", "POST"] } });
+    const io = new Server(serverInstance, { 
+        cors: { 
+            origin: FRONTEND_ORIGIN,
+            methods: ["GET", "POST"] 
+        } 
+    });
+    
     io.use((socket, next) => {
         const token = socket.handshake.auth.token; 
         if (!token) {
